@@ -29,7 +29,7 @@ const config = new Config(process.env.CHAIN_CONFIG_PATH);
   const fundsAccount = getAccount(fundsAccountSeed);
 
   const unsub = await api.tx.utility.batchAll(
-    [config.primaryChain, ...config.parachains]
+    [...config.primaryChains, ...config.parachains]
       .map((chainConfig) => {
         const account = getAccount(chainConfig.accountSeed).address;
         // Send 1 SSC

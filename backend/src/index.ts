@@ -49,9 +49,9 @@ async function main() {
     logger,
     targetChainUrl: config.targetChainUrl,
   });
-  const chainHeadStateMap = new Map<ChainId, PrimaryChainHeadState | ParachainHeadState>();
+  const chainHeadStateMap = new Map<string, PrimaryChainHeadState | ParachainHeadState>();
 
-  const processingChains = [config.primaryChain, ...config.parachains]
+  const processingChains = [...config.primaryChains, ...config.parachains]
     .map(async (chainConfig: PrimaryChainConfig | ParachainConfig) => {
       const chainName = await getChainName(chainConfig.httpUrl);
       const signer = new PoolSigner(
@@ -86,7 +86,7 @@ async function main() {
 
       if ('wsUrl' in chainConfig) {
         const chainHeadState = new PrimaryChainHeadState(0);
-        chainHeadStateMap.set(PRIMARY_CHAIN_ID, chainHeadState);
+        chainHeadStateMap.set(`${chainConfig.prefix}${PRIMARY_CHAIN_ID}`, chainHeadState);
 
         const sourceApi = await createApi(chainConfig.wsUrl);
         await sourceApi.rpc.chain.subscribeFinalizedHeads(async (blockHeader) => {
@@ -112,7 +112,7 @@ async function main() {
                   .forEach((parablockData) => {
                     result.push(parablockData);
 
-                    const parachainHeadState = chainHeadStateMap.get(parablockData.paraId) as ParachainHeadState | undefined;
+                    const parachainHeadState = chainHeadStateMap.get(`${chainConfig.prefix}${parablockData.paraId}`) as ParachainHeadState | undefined;
                     if (parachainHeadState) {
                       if (parachainHeadState.newHeadCallback) {
                         parachainHeadState.newHeadCallback();
@@ -148,7 +148,7 @@ async function main() {
         );
       } else {
         const chainHeadState = new ParachainHeadState();
-        chainHeadStateMap.set(chainConfig.paraId, chainHeadState);
+        chainHeadStateMap.set(`${chainConfig.prefix}${chainConfig.paraId}`, chainHeadState);
 
         await relayFromParachainHeadState(
           feedId,

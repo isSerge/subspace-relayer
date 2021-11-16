@@ -9,6 +9,8 @@ const AnyChainConfig = z.object({
   feedId: z.number().refine((number) => {
     return number >= 0;
   }),
+  // prefix is required to avoid collisions with same paraid on different relay chains
+  prefix: z.string(),
 });
 
 export type AnyChainConfig = z.infer<typeof AnyChainConfig>;
@@ -29,20 +31,20 @@ export type ParachainConfig = z.infer<typeof ParachainConfig>;
 
 const ChainFile = z.object({
   targetChainUrl: z.string(),
-  primaryChain: PrimaryChainConfig,
+  primaryChains: z.array(PrimaryChainConfig),
   parachains: z.array(ParachainConfig),
 });
 
 export class Config {
   public readonly targetChainUrl: string;
-  public readonly primaryChain: PrimaryChainConfig;
+  public readonly primaryChains: PrimaryChainConfig[];
   public readonly parachains: ParachainConfig[];
 
   public constructor(configPath: string) {
     const config = ChainFile.parse(JSON.parse(fs.readFileSync(configPath, 'utf-8')));
 
     this.targetChainUrl = config.targetChainUrl;
-    this.primaryChain = config.primaryChain;
+    this.primaryChains = config.primaryChains;
     this.parachains = config.parachains;
   }
 }

@@ -54,7 +54,7 @@ function createFeed(api: ApiPromise, account: KeyringPair): Promise<number> {
     provider,
   });
 
-  for (const chainConfig of [config.primaryChain, ...config.parachains]) {
+  for (const chainConfig of [...config.primaryChains, ...config.parachains]) {
     const account = getAccount(chainConfig.accountSeed);
     console.log(`Creating feed for account ${account.address}...`);
     const feedId = await createFeed(api, account);
