@@ -16,10 +16,16 @@ if (!process.env.CHAIN_CONFIG_PATH) {
 const config = new Config(process.env.CHAIN_CONFIG_PATH);
 
 (async () => {
-  logger.info(`Connecting to ${config.targetChainUrl}...`);
-  const provider = new WsProvider(config.targetChainUrl);
-  const api = await ApiPromise.create({
-    provider,
+  logger.info(`Connecting to target chain ${config.targetChainUrl}...`);
+  
+  const targetApi = await ApiPromise.create({
+    provider: new WsProvider(config.targetChainUrl),
+  });
+  
+  logger.info(`Connecting to source chain ${config.primaryChain.wsUrls[0]}...`);
+  
+  const sourceApi = await ApiPromise.create({
+    provider: new WsProvider(config.primaryChain.wsUrls),
   });
 
   for (const chainConfig of [config.primaryChain, ...config.parachains]) {
@@ -27,22 +33,23 @@ const config = new Config(process.env.CHAIN_CONFIG_PATH);
     logger.info(`Creating feed for account ${account.address}...`);
 
     const isRelay = chainConfig.feedId === 0 || chainConfig.feedId === 17; // Kusama feeId: 0, Polkadot feedId: 17
-    
+
     let header;
-    
+
     // fetch header to initialise bridge from
     if (isRelay) {
       const blockNumber = (chainConfig as PrimaryChainConfig).headerToSyncFrom;
-      const hash = await api.rpc.chain.getBlockHash(blockNumber);
-      header = await api.rpc.chain.getHeader(hash);
-    } 
-    
-    const feedId = await createFeed(api, account, header);
+      const hash = await sourceApi.rpc.chain.getBlockHash(blockNumber);
+      header = await sourceApi.rpc.chain.getHeader(hash);
+    }
+
+    const feedId = await createFeed(targetApi, account, header);
 
     if (feedId !== chainConfig.feedId) {
       logger.error(`!!! Expected feedId ${chainConfig.feedId}, but created feedId ${feedId}!`);
     }
   }
 
-  api.disconnect();
+  targetApi.disconnect();
+  sourceApi.disconnect();
 })();
