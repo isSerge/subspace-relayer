@@ -181,8 +181,7 @@ export default class Relay {
       // get proof for relay chain block and add it to bytes
       if (isRelayChain) {
         proof = (await pRetry(
-          // TODO: remove hardcoded block number
-          () => this.sourceApi.rpc.grandpa.proveFinality(11445772),
+          () => this.sourceApi.rpc.grandpa.proveFinality(nextBlockToProcess),
           createRetryOptions(error => this.logger.error(error, 'get block justifications retry error:')),
         )).toU8a();
 
