@@ -182,7 +182,7 @@ export default class Relay {
       if (isRelayChain) {
         proof = (await pRetry(
           () => this.sourceApi.rpc.grandpa.proveFinality(nextBlockToProcess),
-          createRetryOptions(error => this.logger.error(error, 'get block justifications retry error:')),
+          createRetryOptions(error => this.logger.error(error, `get block justifications for #${nextBlockToProcess} retry error:`)),
         )).toU8a();
 
         extraBytes = block.byteLength + metadata.byteLength + proof.byteLength;
