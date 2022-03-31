@@ -27,12 +27,11 @@ export async function fetchAndStoreBlock(api: ApiPromise, blockNumber: number, d
     await db.put('last-downloaded-block', blockNumberAsBuffer);
   }
 
-// header param is relay chain block header to initialize bridge from
-export function createFeed(api: ApiPromise, account: KeyringPair, shouldValidate?: boolean ): Promise<number> {
+export function createFeed(api: ApiPromise, account: KeyringPair, initialValidation?: string ): Promise<number> {
   return new Promise((resolve, reject) => {
     let unsub: () => void;
     api.tx.feeds
-      .create(shouldValidate)
+      .create(initialValidation)
       .signAndSend(account, { nonce: -1 }, (result) => {
         if (result.status.isInBlock) {
           const success = result.dispatchError ? false : true;

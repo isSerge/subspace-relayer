@@ -34,11 +34,7 @@ const config = new Config(process.env.CHAIN_CONFIG_PATH);
 
     const isRelay = chainConfig.feedId === 0 || chainConfig.feedId === 17; // Kusama feeId: 0, Polkadot feedId: 17
 
-    const feedId = await createFeed(targetApi, account, isRelay);
-
-    if (feedId !== chainConfig.feedId) {
-      logger.error(`!!! Expected feedId ${chainConfig.feedId}, but created feedId ${feedId}!`);
-    }
+    let initialValidation; 
 
     // initialize grandpa finality verifier for relay chain
     if (isRelay) {
@@ -47,30 +43,25 @@ const config = new Config(process.env.CHAIN_CONFIG_PATH);
       const hash = await sourceApi.rpc.chain.getBlockHash(blockNumber);
       const header = await sourceApi.rpc.chain.getHeader(hash);
 
-      // TODO: get authority list and set id
-
-      const unsub = await targetApi.tx.grandpaFinalityVerifier
-        .initialize({
+      const data = Buffer.from(
+        JSON.stringify({
           chainId: 1,
-          chainType: '',
+          chainType: 'PolkadotLike',
           header,
+          // TODO: get authority list and set id
           authorityList: [],
           setId: 0,
-        })
-        .signAndSend(account, { nonce: -1 }, (result) => {
-          if (result.status.isInBlock) {
-            const success = result.dispatchError ? false : true;
-            logger.info(`📀 Transaction included at blockHash ${result.status.asInBlock} [success = ${success}]`);
-            unsub();
-          } else if (result.status.isBroadcast) {
-            logger.info(`🚀 Transaction broadcasted`);
-          } else if (result.isError) {
-            logger.error('Transaction submission failed');
-            unsub();
-          } else {
-            logger.info(`🤷 Other status ${result.status}`);
-          }
-        });
+        }),
+        'utf-8',
+      );
+
+      initialValidation = `0x${data.toString('hex')}`;
+    }
+
+    const feedId = await createFeed(targetApi, account, initialValidation);
+
+    if (feedId !== chainConfig.feedId) {
+      logger.error(`!!! Expected feedId ${chainConfig.feedId}, but created feedId ${feedId}!`);
     }
   }
 
