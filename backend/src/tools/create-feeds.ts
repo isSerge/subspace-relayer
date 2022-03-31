@@ -45,7 +45,8 @@ const config = new Config(process.env.CHAIN_CONFIG_PATH);
 
       const data = Buffer.from(
         JSON.stringify({
-          chainId: 1,
+          chainId: chainConfig.feedId,
+          // TODO: chainType is an enum - check how to submit enums
           chainType: 'PolkadotLike',
           header,
           // TODO: get authority list and set id
