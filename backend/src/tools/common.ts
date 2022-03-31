@@ -2,7 +2,6 @@ import logger from "../logger";
 import { ApiPromise } from "@polkadot/api";
 import { EventRecord } from "@polkadot/types/interfaces";
 import { KeyringPair } from "@polkadot/keyring/types";
-import type { Header } from '@polkadot/types/interfaces/runtime';
 
 import { blockToBinary, blockNumberToBuffer } from '../utils';
 
@@ -29,11 +28,11 @@ export async function fetchAndStoreBlock(api: ApiPromise, blockNumber: number, d
   }
 
 // header param is relay chain block header to initialize bridge from
-export function createFeed(api: ApiPromise, account: KeyringPair, header?: Header ): Promise<number> {
+export function createFeed(api: ApiPromise, account: KeyringPair, shouldValidate?: boolean ): Promise<number> {
   return new Promise((resolve, reject) => {
     let unsub: () => void;
     api.tx.feeds
-      .create(header && header.toHex())
+      .create(shouldValidate)
       .signAndSend(account, { nonce: -1 }, (result) => {
         if (result.status.isInBlock) {
           const success = result.dispatchError ? false : true;

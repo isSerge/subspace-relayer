@@ -34,19 +34,43 @@ const config = new Config(process.env.CHAIN_CONFIG_PATH);
 
     const isRelay = chainConfig.feedId === 0 || chainConfig.feedId === 17; // Kusama feeId: 0, Polkadot feedId: 17
 
-    let header;
-
-    // fetch header to initialise bridge from
-    if (isRelay) {
-      const blockNumber = (chainConfig as PrimaryChainConfig).headerToSyncFrom;
-      const hash = await sourceApi.rpc.chain.getBlockHash(blockNumber);
-      header = await sourceApi.rpc.chain.getHeader(hash);
-    }
-
-    const feedId = await createFeed(targetApi, account, header);
+    const feedId = await createFeed(targetApi, account, isRelay);
 
     if (feedId !== chainConfig.feedId) {
       logger.error(`!!! Expected feedId ${chainConfig.feedId}, but created feedId ${feedId}!`);
+    }
+
+    // initialize grandpa finality verifier for relay chain
+    if (isRelay) {
+      // get header to start verification from
+      const blockNumber = (chainConfig as PrimaryChainConfig).headerToSyncFrom;
+      const hash = await sourceApi.rpc.chain.getBlockHash(blockNumber);
+      const header = await sourceApi.rpc.chain.getHeader(hash);
+
+      // TODO: get authority list and set id
+
+      const unsub = await targetApi.tx.grandpaFinalityVerifier
+        .initialize({
+          chainId: 1,
+          chainType: '',
+          header,
+          authorityList: [],
+          setId: 0,
+        })
+        .signAndSend(account, { nonce: -1 }, (result) => {
+          if (result.status.isInBlock) {
+            const success = result.dispatchError ? false : true;
+            logger.info(`📀 Transaction included at blockHash ${result.status.asInBlock} [success = ${success}]`);
+            unsub();
+          } else if (result.status.isBroadcast) {
+            logger.info(`🚀 Transaction broadcasted`);
+          } else if (result.isError) {
+            logger.error('Transaction submission failed');
+            unsub();
+          } else {
+            logger.info(`🤷 Other status ${result.status}`);
+          }
+        });
     }
   }
 
