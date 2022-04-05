@@ -1,11 +1,12 @@
 // Small utility that will read relayer configuration and creates feeds for all accounts
-import logger from "../logger";
 import * as dotenv from "dotenv";
+import '@polkadot/api-augment';
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import type { SignedBlock } from '@polkadot/types/interfaces/runtime';
 import { BlockHash } from "@polkadot/types/interfaces";
 import { Bytes } from "@polkadot/types";
 
+import logger from "../logger";
 import Config, { PrimaryChainConfig } from "../config";
 import { getAccount } from "../account";
 import { createFeed } from "./common";
@@ -43,6 +44,17 @@ async function getSetId(api: ApiPromise, blockHash: BlockHash) {
 
   const targetApi = await ApiPromise.create({
     provider: new WsProvider(config.targetChainUrl),
+    types: {
+      ChainType: {
+        _enum: ['PolkadotLike']
+      },
+      InitialValidation: {
+        chainType: "ChainType",
+        header: "Vec<u8>",
+        authorityList: "Vec<u8>",
+        setId: "SetId",
+      }
+    }
   });
 
   logger.info(`Connecting to source chain ${config.primaryChain.wsUrls[0]}...`);
@@ -74,22 +86,14 @@ async function getSetId(api: ApiPromise, blockHash: BlockHash) {
         }
 
         const setId = await getSetId(sourceApi, hash);
-        const chainType = await targetApi.createType("grandpaFinalityVerifier.ChainType", "PolkadotLike");
+        const chainType = (await targetApi.createType("ChainType", "PolkadotLike")).toHex();
 
-        console.log("chainType", chainType.toHuman());
-
-        const data = Buffer.from(
-          JSON.stringify({
-            chainId: chainConfig.feedId,
-            chainType,
-            header,
-            authorityList,
-            setId,
-          }),
-          'utf-8',
-        );
-
-        initialValidation = `0x${data.toString('hex')}`;
+        initialValidation = targetApi.createType("InitialValidation", {
+          chainType,
+          header,
+          authorityList,
+          setId,
+        });
       }
 
       const feedId = await createFeed(targetApi, account, initialValidation);

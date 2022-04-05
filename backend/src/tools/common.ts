@@ -2,6 +2,7 @@ import logger from "../logger";
 import { ApiPromise } from "@polkadot/api";
 import { EventRecord } from "@polkadot/types/interfaces";
 import { KeyringPair } from "@polkadot/keyring/types";
+import { Codec } from "@polkadot/types/types";
 
 import { blockToBinary, blockNumberToBuffer } from '../utils';
 
@@ -27,11 +28,11 @@ export async function fetchAndStoreBlock(api: ApiPromise, blockNumber: number, d
     await db.put('last-downloaded-block', blockNumberAsBuffer);
   }
 
-export function createFeed(api: ApiPromise, account: KeyringPair, initialValidation?: string ): Promise<number> {
+export function createFeed(api: ApiPromise, account: KeyringPair, initialValidation?: Codec ): Promise<number> {
   return new Promise((resolve, reject) => {
     let unsub: () => void;
     api.tx.feeds
-      .create(initialValidation)
+      .create(initialValidation?.toHex())
       .signAndSend(account, { nonce: -1 }, (result) => {
         if (result.status.isInBlock) {
           const success = result.dispatchError ? false : true;
