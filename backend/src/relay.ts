@@ -6,7 +6,7 @@ import { ApiPromise } from "@polkadot/api";
 import Target from "./target";
 import { TxBlock, ChainName, SignerWithAddress, SignedBlockJsonRpc } from "./types";
 import { ParachainHeadState, PrimaryChainHeadState } from "./chainHeadState";
-import { blockToBinary } from './utils';
+import { blockToBinary, decodeProof } from './utils';
 import { IChainArchive } from './chainArchive';
 
 function polkadotAppsUrl(targetChainUrl: string) {
@@ -165,12 +165,7 @@ export default class Relay {
       const rawBlock = await pRetry(
         () => this.sourceApi.rpc.chain.getBlock.raw(blockHash),
         createRetryOptions(error => this.logger.error(error, 'getBlock retry error:')),
-      );
-
-      // check justifications
-      // if null - fetch finality proof, decode and add justifications to blocks
-
-      const block = blockToBinary(rawBlock as SignedBlockJsonRpc);
+      ) as SignedBlockJsonRpc;
 
       const metadata = Buffer.from(
         JSON.stringify({
@@ -180,17 +175,29 @@ export default class Relay {
         'utf-8',
       );
 
-      let proof;
       let extraBytes;
-      // get proof for relay chain block and add it to bytes
-      if (isRelayChain) {
-        proof = (await pRetry(
+      let block;
+
+      // adding justifications from finality proof if there is none
+      if (isRelayChain && !rawBlock.justifications) {
+        const proof = await pRetry(
           () => this.sourceApi.rpc.grandpa.proveFinality(nextBlockToProcess),
           createRetryOptions(error => this.logger.error(error, `get block justifications for #${nextBlockToProcess} retry error:`)),
-        )).toU8a();
+        );
+        const bytes = proof.toU8a();
+        const decodedProof = decodeProof(bytes);
 
-        extraBytes = block.byteLength + metadata.byteLength + proof.byteLength;
+        rawBlock.justifications = [
+          [
+            [70, 82, 78, 75], // FRNK
+            Array.from(decodedProof.justification)
+          ]
+        ];
+
+        block = blockToBinary(rawBlock);
+        extraBytes = block.byteLength + metadata.byteLength + bytes.byteLength;
       } else {
+        block = blockToBinary(rawBlock);
         extraBytes = block.byteLength + metadata.byteLength;
       }
 
