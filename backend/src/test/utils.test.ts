@@ -1,21 +1,16 @@
 import * as tap from 'tap';
 import '@polkadot/api-augment';
 import { Event, EventRecord } from "@polkadot/types/interfaces/system";
-import * as fsp from 'fs/promises';
 
 import {
   getParaHeadAndIdFromEvent,
   isIncludedParablockRecord,
   isInstanceOfSignedBlockJsonRpc,
   blockToBinary,
-  decodeProof,
-  hexToUint8Array,
 } from '../utils';
 import * as signedBlockMock from '../mocks/signedBlock.json';
 import * as signedBlockWithExtrinsicsMock from '../mocks/signedBlockWithExtrinsics.json';
 import * as signedBlockWithLogsMock from '../mocks/signedBlockWithLogs.json';
-import * as signedBlockWithJustificaionsMock from '../mocks/signedBlockWithJustifications.json';
-import { TypeRegistry } from '@polkadot/types';
 
 tap.test('getParaHeadAndIdFromEvent should return parablock hash and paraId', (t) => {
   const paraId = 2088;
@@ -182,23 +177,6 @@ tap.test('blockToBinary util function', (t) => {
   });
 
   tap.test('blockToBinary should convert SignedBlockJsonRpc with justifications to Buffer');
-
-  t.end();
-})
-
-tap.test('decodeProof should return FinalityProof object', async (t) => {
-  const registry = new TypeRegistry();
-  const hash = '0x77380ba05695ae99cac0059f7559f653853ae594e38b52874778597a08a49b63';
-  const hex = await fsp.readFile('src/mocks/test-finality-proof', 'utf-8');
-  const bytes = hexToUint8Array(hex);
-  const result = decodeProof(bytes);
-  const hashFromProof = registry.createType("Hash", result.block).toString();
-
-  t.equal(hash, hashFromProof);
-  
-  const justification = `0x${Buffer.from(result.justification).toString('hex')}`;
-
-  t.same(signedBlockWithJustificaionsMock.justifications[0][1], justification);
 
   t.end();
 });

@@ -6,7 +6,7 @@ import { ApiPromise } from "@polkadot/api";
 import Target from "./target";
 import { TxBlock, ChainName, SignerWithAddress, SignedBlockJsonRpc } from "./types";
 import { ParachainHeadState, PrimaryChainHeadState } from "./chainHeadState";
-import { blockToBinary, decodeProof } from './utils';
+import { blockToBinary } from './utils';
 import { IChainArchive } from './chainArchive';
 
 function polkadotAppsUrl(targetChainUrl: string) {
@@ -185,12 +185,12 @@ export default class Relay {
           createRetryOptions(error => this.logger.error(error, `get block justifications for #${nextBlockToProcess} retry error:`)),
         );
         const bytes = proof.toU8a(true);
-        const decodedProof = decodeProof(bytes);
+        const justification = bytes.slice(36);
 
         rawBlock.justifications = [
           [
             [70, 82, 78, 75], // FRNK
-            Array.from(decodedProof.justification)
+            Array.from(justification)
           ]
         ];
 

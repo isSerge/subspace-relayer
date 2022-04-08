@@ -2,7 +2,7 @@ import { compactToU8a } from "@polkadot/util";
 import { EventRecord, Event } from "@polkadot/types/interfaces/system";
 import { PolkadotPrimitivesV2CandidateReceipt } from "@polkadot/types/lookup";
 import { ApiPromise, WsProvider } from "@polkadot/api";
-import { createStructDecoder, WalkerImpl, decodeUint8Array, decodeUint8Vec } from '@scale-codec/core';
+
 import { ParaHeadAndId, SignedBlockJsonRpc, ChainId } from "./types";
 
 // TODO: implement tests
@@ -102,20 +102,4 @@ export function createApi(url: string | string[]): Promise<ApiPromise> {
 
 export function blockNumberToBuffer(blockNumber: number): Buffer {
     return Buffer.from(BigUint64Array.of(BigInt(blockNumber)).buffer);
-}
-
-interface FinalityProof {
-    block: Uint8Array;
-    justification: Uint8Array;
-}
-
-export function decodeProof(bytes: Uint8Array): FinalityProof {
-    const finalityDecoder = createStructDecoder<FinalityProof>([
-        ['block', walker => decodeUint8Array(walker, 32)],
-        ['justification', decodeUint8Vec],
-    ])
-
-    const result = WalkerImpl.decode(bytes, finalityDecoder);
-
-    return result
 }
