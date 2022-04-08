@@ -184,7 +184,7 @@ export default class Relay {
           () => this.sourceApi.rpc.grandpa.proveFinality(nextBlockToProcess),
           createRetryOptions(error => this.logger.error(error, `get block justifications for #${nextBlockToProcess} retry error:`)),
         );
-        const bytes = proof.toU8a();
+        const bytes = proof.toU8a(true);
         const decodedProof = decodeProof(bytes);
 
         rawBlock.justifications = [

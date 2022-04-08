@@ -115,8 +115,7 @@ export function decodeProof(bytes: Uint8Array): FinalityProof {
         ['justification', decodeUint8Vec],
     ])
 
-    // slice to remove prefix
-    const result = WalkerImpl.decode(bytes.slice(5), finalityDecoder);
+    const result = WalkerImpl.decode(bytes, finalityDecoder);
 
     return result
 }

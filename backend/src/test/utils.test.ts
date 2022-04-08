@@ -9,6 +9,7 @@ import {
   isInstanceOfSignedBlockJsonRpc,
   blockToBinary,
   decodeProof,
+  hexToUint8Array,
 } from '../utils';
 import * as signedBlockMock from '../mocks/signedBlock.json';
 import * as signedBlockWithExtrinsicsMock from '../mocks/signedBlockWithExtrinsics.json';
@@ -188,8 +189,9 @@ tap.test('blockToBinary util function', (t) => {
 tap.test('decodeProof should return FinalityProof object', async (t) => {
   const registry = new TypeRegistry();
   const hash = '0x77380ba05695ae99cac0059f7559f653853ae594e38b52874778597a08a49b63';
-  const proof = await fsp.readFile('src/mocks/proof-bytes');
-  const result = decodeProof(proof);
+  const hex = await fsp.readFile('src/mocks/test-finality-proof', 'utf-8');
+  const bytes = hexToUint8Array(hex);
+  const result = decodeProof(bytes);
   const hashFromProof = registry.createType("Hash", result.block).toString();
 
   t.equal(hash, hashFromProof);
