@@ -175,31 +175,11 @@ export default class Relay {
         'utf-8',
       );
 
-      let extraBytes;
-      let block;
+      const block = isRelayChain
+        ? await this.getBlockWithJustification(rawBlock)
+        : blockToBinary(rawBlock);
 
-      // adding justifications from finality proof if there is none
-      if (isRelayChain && !rawBlock.justifications) {
-        const proof = await pRetry(
-          () => this.sourceApi.rpc.grandpa.proveFinality(nextBlockToProcess),
-          createRetryOptions(error => this.logger.error(error, `get block justifications for #${nextBlockToProcess} retry error:`)),
-        );
-        const bytes = proof.toU8a(true);
-        const justification = bytes.slice(36);
-
-        rawBlock.justifications = [
-          [
-            [70, 82, 78, 75], // FRNK
-            Array.from(justification)
-          ]
-        ];
-
-        block = blockToBinary(rawBlock);
-        extraBytes = block.byteLength + metadata.byteLength + bytes.byteLength;
-      } else {
-        block = blockToBinary(rawBlock);
-        extraBytes = block.byteLength + metadata.byteLength;
-      }
+      const extraBytes = block.byteLength + metadata.byteLength;
 
       if (accumulatedBytes + extraBytes >= this.batchBytesLimit) {
         // With new block limit will be exceeded, yield now
@@ -222,6 +202,30 @@ export default class Relay {
     if (blocksToArchive.length > 0) {
       yield [blocksToArchive, nextBlockToProcess];
     }
+  }
+
+  private async getBlockWithJustification(rawBlock: SignedBlockJsonRpc) {
+    // adding justifications from finality proof if there is none
+    if (!rawBlock.justifications) {
+      const { number } = rawBlock.block.header;
+      const proof = await pRetry(
+        () => this.sourceApi.rpc.grandpa.proveFinality(number),
+        createRetryOptions(error => this.logger.error(error, `get block justifications for #${number} retry error:`)),
+      );
+      const proofBytes = proof.toU8a(true);
+      // finality proof returns encoded block hash, justification and unknown headers
+      // only care about justification, removing leading extra bytes: 32 for block hash and 4 for SCALE prefix(?)
+      const justification = proofBytes.slice(36);
+
+      rawBlock.justifications = [
+        [
+          [70, 82, 78, 75], // FRNK
+          Array.from(justification)
+        ]
+      ];
+    }
+
+    return blockToBinary(rawBlock);
   }
 
   private async relayBlocks(
