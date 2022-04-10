@@ -214,8 +214,8 @@ export default class Relay {
       );
       const proofBytes = proof.toU8a(true);
       // finality proof returns encoded block hash, justification and unknown headers
-      // only care about justification, removing leading extra bytes: 32 for block hash and 4 for SCALE prefix(?)
-      const justification = proofBytes.slice(36);
+      // only care about justification, removing leading extra bytes: 32 for block hash (has known fixed length)
+      const justification = proofBytes.slice(32);
 
       rawBlock.justifications = [
         [
