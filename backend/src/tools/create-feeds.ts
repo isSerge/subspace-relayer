@@ -43,12 +43,12 @@ async function getSetId(api: ApiPromise, blockHash: BlockHash) {
 
   const targetApi = await ApiPromise.create({
     provider: new WsProvider(config.targetChainUrl),
+    // TODO: check how to avoid passing types and use Metadata v14 instead
     types: {
       ChainType: {
         _enum: ['PolkadotLike']
       },
       InitialValidation: {
-        chainType: "ChainType",
         header: "Vec<u8>",
         authorityList: "Vec<u8>",
         setId: "SetId",
@@ -85,17 +85,16 @@ async function getSetId(api: ApiPromise, blockHash: BlockHash) {
         }
 
         const setId = await getSetId(sourceApi, hash);
-        const chainType = (await targetApi.createType("ChainType", "PolkadotLike")).toHex();
-
+        
         initialValidation = targetApi.createType("InitialValidation", {
-          chainType,
           header,
           authorityList,
           setId,
         });
       }
-
-      const feedId = await createFeed(targetApi, account, initialValidation);
+      
+      const chainType = await targetApi.createType("ChainType", "PolkadotLike");
+      const feedId = await createFeed(targetApi, account, chainType.toHex(), initialValidation?.toHex());
 
       if (feedId !== chainConfig.feedId) {
         logger.error(`!!! Expected feedId ${chainConfig.feedId}, but created feedId ${feedId}!`);
